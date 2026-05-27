@@ -21,7 +21,7 @@ terraform {
   required_version = ">= 1.10.0"
 
   backend "s3" {
-    bucket       = "troica-tfstate-troica-2026"
+    bucket       = "troica-tfstate-troica-2026-jyupk"
     key          = "phase-0/terraform.tfstate"
     region       = "ap-northeast-2"
     encrypt      = true

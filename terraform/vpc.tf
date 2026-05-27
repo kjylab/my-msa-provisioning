@@ -107,6 +107,14 @@ resource "aws_security_group" "cluster-node-sg" {
     cidr_blocks = [aws_vpc.kt-cloud-vpc.cidr_block]
   }
 
+  # Calico IPIP (protocol 4) cross-node pod traffic: self-referential rule
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true
+  }
+
   ingress {
     from_port       = 22
     to_port         = 22
@@ -121,6 +129,14 @@ resource "aws_security_group" "cluster-node-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # NLB → Traefik NodePort (클라이언트 IP 보존으로 인터넷에서 직접 들어옴)
+  ingress {
+    from_port   = 31896
+    to_port     = 31897
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -129,13 +145,48 @@ resource "aws_security_group" "cluster-node-sg" {
   }
 }
 
-resource "aws_security_group_rule" "cluster_node_self_ingress" {
-  type                     = "ingress"
-  from_port                = 0
-  to_port                  = 0
-  protocol                 = "-1"
-  security_group_id        = aws_security_group.cluster-node-sg.id
-  source_security_group_id = aws_security_group.cluster-node-sg.id
+
+# Traefik HTTP ingress: NLB port 80 → worker NodePort 31896
+resource "aws_lb_target_group" "traefik-http-tg" {
+  name     = "traefik-http-tg"
+  port     = 31896
+  protocol = "TCP"
+  vpc_id   = aws_vpc.kt-cloud-vpc.id
+
+  health_check {
+    protocol = "TCP"
+    port     = "31896"
+    interval = 10
+  }
+}
+
+resource "aws_lb_listener" "traefik-http-listener" {
+  load_balancer_arn = aws_lb.kt-cloud-nlb.arn
+  port              = 80
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.traefik-http-tg.arn
+  }
+}
+
+resource "aws_lb_target_group_attachment" "traefik-2a-worker-attach" {
+  target_group_arn = aws_lb_target_group.traefik-http-tg.arn
+  target_id        = aws_instance.ap-northeast-2a-worker-node-01.id
+  port             = 31896
+}
+
+resource "aws_lb_target_group_attachment" "traefik-2b-worker-01-attach" {
+  target_group_arn = aws_lb_target_group.traefik-http-tg.arn
+  target_id        = aws_instance.ap-northeast-2b-worker-node-01.id
+  port             = 31896
+}
+
+resource "aws_lb_target_group_attachment" "traefik-2b-worker-02-attach" {
+  target_group_arn = aws_lb_target_group.traefik-http-tg.arn
+  target_id        = aws_instance.ap-northeast-2b-worker-node-02.id
+  port             = 31896
 }
 
 data "http" "my_ip" {
