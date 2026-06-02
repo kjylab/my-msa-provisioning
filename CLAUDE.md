@@ -18,6 +18,7 @@ Troica Market Service MSA의 **AWS 인프라 (Terraform) + Kubernetes 클러스�
 | Go | 1.22+ (ecr-credential-provider 빌드용) |
 | AWS CLI | 2.x + `aws configure` |
 | SSH key | `~/.ssh/ktcloud-bastion-node-key` |
+| GitHub PAT | `repo` + `secrets:write` 권한 — `export TF_VAR_github_token=ghp_...` |
 
 ## 주요 커맨드
 
@@ -25,6 +26,9 @@ Troica Market Service MSA의 **AWS 인프라 (Terraform) + Kubernetes 클러스�
 
 ```bash
 cd terraform
+
+# GitHub PAT 환경변수 설정 (apply 전 필수 — BASE_URL secret 자동 갱신용)
+export TF_VAR_github_token=ghp_...
 
 # 초기화 (첫 실행 또는 backend 변경 시)
 terraform init

@@ -20,6 +20,17 @@
 terraform {
   required_version = ">= 1.10.0"
 
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
+  }
+
   backend "s3" {
     bucket       = "troica-tfstate-troica-2026-jyupk"
     key          = "phase-0/terraform.tfstate"
